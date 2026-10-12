@@ -1,0 +1,12 @@
+# Basic recipe for MCP tool initial setup
+version = "0"
+ 
+[ dependency ]
+
+# SDKs
+# This is everything, but projects will be created from examples with more refined package setups. This is only needed
+# for initial example listing
+aiml="~"
+sidewalk="~"
+wiseconnect="~"
+simplicity-sdk="~"

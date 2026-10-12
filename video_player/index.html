@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101411">
+  <title>Motion Deck · Video Player</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101411;
+      --panel: #181e19;
+      --panel-soft: #202820;
+      --border: #303b31;
+      --text: #f2f5ef;
+      --muted: #9da99d;
+      --lime: #c2f970;
+      --lime-ink: #15200b;
+      --orange: #ffae72;
+      --red: #ff827d;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(ellipse at 10% -10%, #273526 0, transparent 42%), var(--bg); color: var(--text); }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .shell { width: min(1440px, calc(100% - 48px)); margin: 0 auto; padding: 25px 0 34px; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 13px; }
+    .brand-mark { width: 39px; height: 39px; display: grid; place-items: center; background: var(--lime); color: var(--lime-ink); border-radius: 12px; font-size: 20px; font-weight: 900; }
+    .brand-name { font-size: 16px; font-weight: 750; letter-spacing: .02em; }
+    .brand-sub { margin-top: 2px; color: var(--muted); font-size: 12px; }
+    .connection { display: flex; align-items: center; gap: 9px; border: 1px solid var(--border); border-radius: 999px; padding: 9px 13px; color: var(--muted); font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #778078; box-shadow: 0 0 0 4px #77807820; }
+    .connection.online { border-color: #516c35; color: #d4e8b2; }
+    .connection.online .dot { background: var(--lime); box-shadow: 0 0 0 4px #c2f97020; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(320px, .85fr); gap: 20px; align-items: start; }
+    .panel { background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 20px 50px #00000020; }
+    .player-panel { overflow: hidden; }
+    .video-frame { position: relative; aspect-ratio: 16 / 9; background: #080a08; display: grid; place-items: center; overflow: hidden; }
+    video { width: 100%; height: 100%; object-fit: contain; background: #080a08; }
+    .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 24px; background: radial-gradient(ellipse at center, #273027 0, #0a0c0a 70%); }
+    .empty[hidden] { display: none; }
+    .empty-inner { max-width: 390px; }
+    .film-icon { width: 54px; height: 54px; margin: 0 auto 16px; border: 1px solid #536050; color: var(--lime); border-radius: 17px; display: grid; place-items: center; font-size: 23px; }
+    .empty h1 { margin: 0 0 8px; font-size: clamp(21px, 3vw, 29px); letter-spacing: -.035em; }
+    .empty p { color: var(--muted); margin: 0 auto 17px; line-height: 1.55; font-size: 13px; }
+    .file-button, .primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: var(--lime); color: var(--lime-ink); border: 0; border-radius: 10px; padding: 10px 15px; font-weight: 750; font-size: 13px; }
+    .file-button:hover, .primary:hover { background: #d2ff91; }
+    .hidden-input { display: none; }
+    .player-content { padding: 16px 19px 18px; }
+    .track { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 15px; }
+    .track-name { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .track-caption { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .quiet-btn, .icon-btn { border: 1px solid var(--border); color: var(--text); background: var(--panel-soft); border-radius: 9px; padding: 8px 11px; font-size: 12px; }
+    .quiet-btn:hover, .icon-btn:hover { border-color: #60764a; }
+    .seek { width: 100%; accent-color: var(--lime); margin: 0; }
+    .time-row { display: flex; justify-content: space-between; color: var(--muted); font-size: 11px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+    .controls { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 12px; }
+    .icon-btn { width: 41px; height: 39px; font-size: 15px; }
+    .play-btn { width: 48px; height: 44px; border-radius: 13px; font-size: 17px; }
+    .controls-hint { text-align: center; margin-top: 13px; color: var(--muted); font-size: 11px; }
+    .side { display: grid; gap: 15px; }
+    .side-panel { padding: 18px; }
+    .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+    .section-heading h2 { margin: 0; font-size: 14px; letter-spacing: .01em; }
+    .eyebrow { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: .12em; font-weight: 750; }
+    .tiny-tag { color: var(--muted); font-size: 10px; border: 1px solid var(--border); border-radius: 999px; padding: 4px 7px; }
+    .axes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .axis { border: 1px solid var(--border); border-radius: 11px; background: #131814; padding: 10px; }
+    .axis-label { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+    .axis-value { font-size: 17px; margin-top: 5px; font-variant-numeric: tabular-nums; }
+    .unit { color: var(--muted); font-size: 9px; margin-left: 2px; }
+    .sample-line { color: var(--muted); font-size: 10px; margin-top: 10px; }
+    .gesture-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 0 12px; border-bottom: 1px solid var(--border); }
+    .gesture-toggle strong { display: block; font-size: 12px; }
+    .gesture-toggle small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .switch { position: relative; width: 39px; height: 22px; flex: 0 0 auto; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch span { position: absolute; inset: 0; background: #444d44; border-radius: 99px; transition: .18s; }
+    .switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; border-radius: 50%; background: #eef1eb; transition: .18s; }
+    .switch input:checked + span { background: #84ad45; }
+    .switch input:checked + span::before { transform: translateX(17px); background: white; }
+    .mapping { display: grid; gap: 0; margin: 5px 0 13px; }
+    .map-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #ffffff0b; color: var(--muted); font-size: 11px; }
+    .map-row b { color: var(--text); font-weight: 650; text-align: right; }
+    .threshold { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 11px; margin: 10px 0 5px; }
+    input[type=range] { width: 100%; accent-color: var(--lime); }
+    .gesture-actions { display: flex; gap: 8px; margin-top: 13px; }
+    .gesture-actions button { flex: 1; }
+    .gesture-state { margin-top: 12px; min-height: 37px; border-radius: 10px; padding: 9px 10px; background: #121713; color: var(--muted); font-size: 11px; }
+    .gesture-state.active { color: var(--lime); border: 1px solid #465b31; }
+    .notice { color: var(--muted); font-size: 10px; line-height: 1.5; margin: 12px 0 0; }
+    .event-log { display: grid; gap: 8px; min-height: 38px; }
+    .event { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+    .event b { color: var(--text); font-weight: 650; }
+    .event time { font-variant-numeric: tabular-nums; font-size: 10px; }
+    .footer { display: flex; justify-content: space-between; gap: 12px; color: #768176; font-size: 10px; margin-top: 17px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } .side { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .shell { width: min(100% - 24px, 600px); padding-top: 14px; } .topbar { align-items: flex-start; } .connection { font-size: 10px; padding: 8px 10px; } .side { grid-template-columns: 1fr; } .player-content { padding: 13px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">M</div>
+        <div><div class="brand-name">MOTION DECK</div><div class="brand-sub">Laptop video · accelerometer controls</div></div>
+      </div>
+      <div class="connection" id="connection"><span class="dot"></span><span id="connectionText">Waiting for board</span></div>
+    </header>
+
+    <div class="layout">
+      <section class="panel player-panel" aria-label="Video player">
+        <div class="video-frame">
+          <video id="video" playsinline></video>
+          <div class="empty" id="empty">
+            <div class="empty-inner">
+              <div class="film-icon">▶</div>
+              <h1>Your video, in motion</h1>
+              <p>Choose a video file from this laptop. Motion Deck keeps the file in your browser and uses board gestures to control playback.</p>
+              <label class="file-button" for="videoFile">＋ <span>Choose a video</span></label>
+            </div>
+          </div>
+        </div>
+        <div class="player-content">
+          <div class="track">
+            <div style="min-width:0"><div class="track-name" id="trackName">No video selected</div><div class="track-caption">Local playback · no upload to server</div></div>
+            <label class="quiet-btn" for="videoFile">Open file</label>
+            <input class="hidden-input" id="videoFile" type="file" accept="video/*">
+          </div>
+          <input class="seek" id="seek" type="range" min="0" max="1000" value="0" aria-label="Seek video">
+          <div class="time-row"><span id="currentTime">0:00</span><span id="duration">0:00</span></div>
+          <div class="controls">
+            <button class="icon-btn" id="back10" title="Back 10 seconds">−10</button>
+            <button class="icon-btn" id="prev" title="Previous video">⏮</button>
+            <button class="primary play-btn" id="play" title="Play or pause">▶</button>
+            <button class="icon-btn" id="next" title="Next video">⏭</button>
+            <button class="icon-btn" id="forward10" title="Forward 10 seconds">+10</button>
+          </div>
+          <div class="controls-hint">Space play/pause · ← / → seek · ↑ / ↓ volume</div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <section class="panel side-panel">
+          <div class="section-heading"><div><div class="eyebrow">Live sensor</div><h2 style="margin-top:4px">Board readings</h2></div><span class="tiny-tag" id="sampleUnit">mg</span></div>
+          <div class="axes">
+            <div class="axis"><div class="axis-label">X axis</div><div class="axis-value" id="axisX">—<span class="unit">mg</span></div></div>
+            <div class="axis"><div class="axis-label">Y axis</div><div class="axis-value" id="axisY">—<span class="unit">mg</span></div></div>
+            <div class="axis"><div class="axis-label">Z axis</div><div class="axis-value" id="axisZ">—<span class="unit">mg</span></div></div>
+          </div>
+          <div class="sample-line" id="sampleAge">No readings received yet</div>
+        </section>
+
+        <section class="panel side-panel">
+          <div class="section-heading"><div><div class="eyebrow">Control map</div><h2 style="margin-top:4px">Motion gestures</h2></div></div>
+          <div class="gesture-toggle">
+            <div><strong>Enable board control</strong><small>Gestures control the selected video</small></div>
+            <label class="switch"><input type="checkbox" id="gestures" checked><span></span></label>
+          </div>
+          <div class="mapping">
+            <div class="map-row"><span>Tilt top / bottom</span><b>Volume up / down</b></div>
+            <div class="map-row"><span>Flick left / right</span><b>Seek back / forward 10s</b></div>
+            <div class="map-row"><span>Flick forward / back</span><b>Play / pause</b></div>
+          </div>
+          <div class="threshold"><span>Flick sensitivity</span><b><span id="thresholdValue">500</span> mg</b></div>
+          <input id="threshold" type="range" min="250" max="1000" step="50" value="500" aria-label="Flick sensitivity">
+          <div class="gesture-actions">
+            <button class="quiet-btn" id="calibrate">Set neutral position</button>
+            <button class="quiet-btn" id="testGesture">Try controls</button>
+          </div>
+          <div class="gesture-state" id="gestureState">Keep the board level, then set its neutral position.</div>
+          <p class="notice">Press Play once with the mouse to allow the browser to start video playback. Gestures work after sensor data arrives.</p>
+        </section>
+
+        <section class="panel side-panel">
+          <div class="section-heading"><div><div class="eyebrow">Recent activity</div><h2 style="margin-top:4px">Player actions</h2></div><button class="quiet-btn" id="clearLog">Clear</button></div>
+          <div class="event-log" id="eventLog"><div class="event"><span>Ready when you are</span><time>—</time></div></div>
+        </section>
+      </aside>
+    </div>
+    <footer class="footer"><span>Motion Deck · local network controller</span><span id="serverHint">Board endpoint: this laptop · port 8080 · /coordinates</span></footer>
+  </main>
+
+  <script>
+    const video = document.getElementById('video');
+    const fileInput = document.getElementById('videoFile');
+    const connection = document.getElementById('connection');
+    const connectionText = document.getElementById('connectionText');
+    const gesturesEnabled = document.getElementById('gestures');
+    const gestureState = document.getElementById('gestureState');
+    const thresholdInput = document.getElementById('threshold');
+    let objectUrl = null;
+    let currentSample = null;
+    let previousSample = null;
+    let neutralPitch = null;
+    let neutralLabel = null;
+    let lastFlickAt = 0;
+    let lastVolumeAt = 0;
+    let pitchDirection = 0;
+    let latestPacketAt = 0;
+    const volumeStep = 0.05;
+    const gestureCooldown = 850;
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds)) return '0:00';
+      const total = Math.floor(seconds);
+      return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+    }
+
+    function logAction(message) {
+      const log = document.getElementById('eventLog');
+      if (log.firstElementChild?.textContent.includes('Ready when you are')) log.innerHTML = '';
+      const row = document.createElement('div');
+      row.className = 'event';
+      const label = document.createElement('b');
+      label.textContent = message;
+      const time = document.createElement('time');
+      time.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      row.append(label, time);
+      log.prepend(row);
+      while (log.children.length > 5) log.lastElementChild.remove();
+    }
+
+    async function playPause(force) {
+      if (video.paused && force !== false) {
+        try { await video.play(); logAction('Play'); }
+        catch { setGestureMessage('Click Play once in the player, then try the board gesture.'); }
+      } else if (!video.paused && force !== true) {
+        video.pause();
+        logAction('Pause');
+      }
+      updatePlayButton();
+    }
+
+    function updatePlayButton() {
+      document.getElementById('play').textContent = video.paused ? '▶' : 'Ⅱ';
+      document.getElementById('play').title = video.paused ? 'Play' : 'Pause';
+    }
+
+    function seekBy(seconds) {
+      if (!Number.isFinite(video.duration)) return;
+      video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + seconds));
+      logAction(seconds < 0 ? 'Seek back 10s' : 'Seek forward 10s');
+    }
+
+    function setVolume(direction) {
+      video.volume = Math.max(0, Math.min(1, video.volume + direction * volumeStep));
+      video.muted = video.volume === 0;
+      logAction(direction > 0 ? 'Volume up' : 'Volume down');
+      setGestureMessage(`Volume ${Math.round(video.volume * 100)}%`);
+    }
+
+    function setGestureMessage(message, active = false) {
+      gestureState.textContent = message;
+      gestureState.classList.toggle('active', active);
+    }
+
+    function samplePitch(sample) {
+      const x = sample.x / 1000;
+      const y = sample.y / 1000;
+      const z = sample.z / 1000;
+      return Math.atan2(y, Math.sqrt(x * x + z * z)) * 180 / Math.PI;
+    }
+
+    function handleSample(sample) {
+      if (![sample.x, sample.y, sample.z].every(Number.isFinite)) return;
+      currentSample = sample;
+      latestPacketAt = Date.now();
+      document.getElementById('axisX').innerHTML = `${Math.round(sample.x)}<span class="unit">mg</span>`;
+      document.getElementById('axisY').innerHTML = `${Math.round(sample.y)}<span class="unit">mg</span>`;
+      document.getElementById('axisZ').innerHTML = `${Math.round(sample.z)}<span class="unit">mg</span>`;
+      document.getElementById('sampleAge').textContent = `Last sample · ${new Date(latestPacketAt).toLocaleTimeString()}`;
+      connection.classList.add('online');
+      connectionText.textContent = 'Board streaming';
+
+      if (gesturesEnabled.checked && previousSample) detectFlick(sample);
+      if (gesturesEnabled.checked) detectTilt(sample);
+      previousSample = sample;
+    }
+
+    function detectFlick(sample) {
+      const now = Date.now();
+      if (now - lastFlickAt < gestureCooldown) return;
+      const dx = sample.x - previousSample.x;
+      const dz = sample.z - previousSample.z;
+      const threshold = Number(thresholdInput.value);
+      if (Math.max(Math.abs(dx), Math.abs(dz)) < threshold) return;
+      if (neutralPitch !== null && Math.abs(samplePitch(sample) - neutralPitch) > 24) return;
+
+      lastFlickAt = now;
+      if (Math.abs(dx) >= Math.abs(dz)) {
+        seekBy(dx > 0 ? 10 : -10);
+        setGestureMessage(dx > 0 ? 'Right flick · seek forward' : 'Left flick · seek back', true);
+      } else if (dz > 0) {
+        void playPause(true);
+        setGestureMessage('Forward flick · play', true);
+      } else {
+        void playPause(false);
+        setGestureMessage('Backward flick · pause', true);
+      }
+    }
+
+    function detectTilt(sample) {
+      const pitch = samplePitch(sample);
+      if (neutralPitch === null) {
+        setGestureMessage('Keep the board level, then set its neutral position.');
+        return;
+      }
+      const delta = pitch - neutralPitch;
+      const direction = delta > 12 ? 1 : (delta < -12 ? -1 : 0);
+      if (!direction) {
+        pitchDirection = 0;
+        return;
+      }
+      const now = Date.now();
+      if (now - lastVolumeAt < 360) return;
+      lastVolumeAt = now;
+      pitchDirection = direction;
+      setVolume(direction);
+    }
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(file);
+      video.src = objectUrl;
+      document.getElementById('trackName').textContent = file.name;
+      document.getElementById('empty').hidden = true;
+      video.load();
+      logAction(`Loaded ${file.name}`);
+    });
+
+    document.getElementById('play').addEventListener('click', () => void playPause());
+    document.getElementById('back10').addEventListener('click', () => seekBy(-10));
+    document.getElementById('forward10').addEventListener('click', () => seekBy(10));
+    document.getElementById('prev').addEventListener('click', () => seekBy(-10));
+    document.getElementById('next').addEventListener('click', () => seekBy(10));
+    document.getElementById('calibrate').addEventListener('click', () => {
+      if (!currentSample) return setGestureMessage('Waiting for a board sample before calibration.');
+      neutralPitch = samplePitch(currentSample);
+      neutralLabel = { ...currentSample };
+      setGestureMessage('Neutral position saved. Tilt the board to adjust volume.', true);
+      logAction('Neutral position calibrated');
+    });
+    document.getElementById('testGesture').addEventListener('click', () => {
+      void playPause();
+      setGestureMessage('Tested the player control.', true);
+    });
+    document.getElementById('clearLog').addEventListener('click', () => {
+      document.getElementById('eventLog').innerHTML = '<div class="event"><span>Ready when you are</span><time>—</time></div>';
+    });
+    thresholdInput.addEventListener('input', () => {
+      document.getElementById('thresholdValue').textContent = thresholdInput.value;
+    });
+    gesturesEnabled.addEventListener('change', () => {
+      setGestureMessage(gesturesEnabled.checked ? 'Board gestures enabled.' : 'Board gestures paused.');
+    });
+    video.addEventListener('timeupdate', () => {
+      document.getElementById('currentTime').textContent = formatTime(video.currentTime);
+      document.getElementById('seek').value = video.duration ? Math.round(video.currentTime / video.duration * 1000) : 0;
+    });
+    video.addEventListener('loadedmetadata', () => {
+      document.getElementById('duration').textContent = formatTime(video.duration);
+    });
+    video.addEventListener('play', updatePlayButton);
+    video.addEventListener('pause', updatePlayButton);
+    document.getElementById('seek').addEventListener('input', (event) => {
+      if (video.duration) video.currentTime = Number(event.target.value) / 1000 * video.duration;
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.target.matches('input, button, label')) return;
+      if (event.code === 'Space') { event.preventDefault(); void playPause(); }
+      if (event.code === 'ArrowLeft') seekBy(-10);
+      if (event.code === 'ArrowRight') seekBy(10);
+      if (event.code === 'ArrowUp') { event.preventDefault(); setVolume(1); }
+      if (event.code === 'ArrowDown') { event.preventDefault(); setVolume(-1); }
+    });
+
+    const events = new EventSource('/events');
+    events.onopen = () => {
+      connectionText.textContent = latestPacketAt ? 'Board streaming' : 'Server ready · waiting for board';
+    };
+    events.onmessage = (event) => {
+      try { handleSample(JSON.parse(event.data)); } catch { /* Ignore malformed event frames. */ }
+    };
+    events.onerror = () => {
+      if (Date.now() - latestPacketAt > 3000) {
+        connection.classList.remove('online');
+        connectionText.textContent = 'Waiting for board';
+      }
+    };
+    setInterval(() => {
+      if (latestPacketAt && Date.now() - latestPacketAt > 3000) {
+        connection.classList.remove('online');
+        connectionText.textContent = 'Board disconnected';
+      }
+    }, 1000);
+  </script>
+</body>
+</html>

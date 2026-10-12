@@ -1,0 +1,9 @@
+{
+  "name": "siwg917-video-player",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local video player controlled by SiWG917 accelerometer samples",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

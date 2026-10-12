@@ -1,0 +1,4 @@
+C:/Users/nithy/SimplicityStudio/v6_workspace/wifi_http_client_soc/cmake_gcc/build/CMakeFiles/slc.dir
+C:/Users/nithy/SimplicityStudio/v6_workspace/wifi_http_client_soc/cmake_gcc/build/CMakeFiles/wifi_http_client_soc.dir
+C:/Users/nithy/SimplicityStudio/v6_workspace/wifi_http_client_soc/cmake_gcc/build/CMakeFiles/edit_cache.dir
+C:/Users/nithy/SimplicityStudio/v6_workspace/wifi_http_client_soc/cmake_gcc/build/CMakeFiles/rebuild_cache.dir
